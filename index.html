@@ -432,7 +432,34 @@
     font-size: 14.5px;
     font-weight: 500;
     line-height: 1.45;
-    margin: 0 26px 10px 0;
+    margin: 0 26px 4px 0;
+  }
+  .card-meta {
+    font-size: 11.5px;
+    color: var(--muted-fg);
+    font-weight: 600;
+    margin: 0 0 9px;
+  }
+
+  .board-toolbar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .board-toolbar input[type="text"] { max-width: 320px; }
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--muted-fg);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .toggle-label input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
   }
 
   .phasebar { display: flex; gap: 6px; }
@@ -547,9 +574,31 @@
   }
   .close-x:hover { color: var(--accent); transform: rotate(90deg) scale(1.1); }
 
-  .m-note {
+  .m-title-input {
+    font-family: var(--font-head); font-size: 23px; font-weight: 700; margin: 0 0 16px;
+    flex: 1;
+  }
+  input.m-title-input,
+  input.m-note-input {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 4px 2px;
+  }
+  input.m-title-input:focus,
+  input.m-note-input:focus {
+    outline: none;
+    border-bottom: 2px solid var(--accent);
+    box-shadow: none;
+  }
+  .m-note-input {
+    width: 100%;
     font-size: 14px; color: var(--muted-fg); margin: -8px 0 18px; line-height: 1.6; font-weight: 500;
   }
+  .m-section { margin-bottom: 16px; }
+  .m-meta-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .m-meta-row .wf-field { flex: 1; min-width: 150px; }
 
   .phase-step {
     border: 2px solid var(--border);
@@ -807,19 +856,53 @@
   .chip[data-k="should"] { background: var(--tag-should-bg); color: var(--tag-should-text); }
   .chip[data-k="could"] { background: var(--tag-could-bg); color: var(--tag-could-text); }
   .chip[data-k="wont"] { background: var(--tag-wont-bg); color: var(--tag-wont-text); }
-  .board-del {
+  .board-card-actions {
     position: absolute;
-    top: 14px; right: 14px;
+    top: 12px; right: 12px;
+    display: flex;
+    gap: 4px;
+  }
+  .card-action-btn {
     background: transparent;
     border: none;
     color: var(--muted-fg);
-    font-size: 16px;
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
-    padding: 4px 6px;
+    padding: 5px 8px;
     border-radius: var(--radius-full);
+    white-space: nowrap;
     transition: background 150ms, color 150ms;
   }
-  .board-del:hover { background: var(--secondary); color: #fff; }
+  .card-action-btn:hover { background: var(--muted); color: var(--fg); }
+  .card-action-btn.danger:hover { background: var(--secondary); color: #fff; }
+
+  .board-progress { margin-top: 12px; }
+  .progress-bar {
+    height: 8px;
+    background: var(--muted);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-bar span { display: block; height: 100%; background: var(--quaternary); border-radius: var(--radius-full); }
+  .board-progress-label { font-size: 11px; color: var(--muted-fg); font-weight: 600; margin: 6px 0 0; }
+
+  .archive-section { max-width: 1180px; margin: 32px auto 0; }
+  .archive-toggle {
+    background: transparent;
+    border: none;
+    color: var(--muted-fg);
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .archive-toggle:hover { color: var(--fg); }
+  .boards-grid.archived { margin-top: 14px; opacity: 0.82; }
 </style>
 </head>
 <body>
@@ -860,6 +943,13 @@
   </div>
 
   <div class="boards-grid" id="boards-grid"></div>
+
+  <div class="archive-section" id="archive-section" hidden>
+    <button class="archive-toggle" id="archive-toggle" type="button">
+      <span id="archive-chevron">▸</span> บอร์ดที่เก็บถาวร (<span id="archive-count">0</span>)
+    </button>
+    <div class="boards-grid archived" id="archived-grid" hidden></div>
+  </div>
 </div>
 
 <div id="view-board" class="view" hidden>
@@ -914,6 +1004,14 @@
         <button class="add-btn inline" id="add-btn"><span class="btn-icon">+</span>เพิ่มลงบอร์ด</button>
       </div>
     </div>
+  </div>
+
+  <div class="board-toolbar">
+    <input type="text" id="search-input" placeholder="ค้นหาชื่อ requirement...">
+    <label class="toggle-label">
+      <input type="checkbox" id="filter-unfinished">
+      แสดงเฉพาะที่ยังไม่เสร็จ
+    </label>
   </div>
 
   <div class="board" id="board">
@@ -1008,13 +1106,31 @@
 <div class="veil" id="veil">
   <div class="modal">
     <div class="modal-head">
-      <div>
-        <span class="modal-tag" id="m-tag">MUST</span>
-        <h3 id="m-title">-</h3>
-      </div>
+      <input type="text" id="m-title" class="m-title-input" placeholder="ชื่อ requirement">
       <button class="close-x" id="m-close">&times;</button>
     </div>
-    <div id="m-note" class="m-note"></div>
+    <input type="text" id="m-note" class="m-note-input" placeholder="รายละเอียด / เหตุผล (ไม่บังคับ)">
+
+    <div class="m-section">
+      <label>ระดับ MoSCoW</label>
+      <div class="moscow-picker" id="m-kind-picker">
+        <button type="button" data-k="must">Must<span class="th">ต้องมี</span></button>
+        <button type="button" data-k="should">Should<span class="th">ควรมี</span></button>
+        <button type="button" data-k="could">Could<span class="th">มีก็ดี</span></button>
+        <button type="button" data-k="wont">Won't<span class="th">ยังไม่ทำ</span></button>
+      </div>
+    </div>
+
+    <div class="m-meta-row">
+      <div class="wf-field">
+        <label for="m-owner">ผู้รับผิดชอบ</label>
+        <input type="text" id="m-owner" placeholder="ไม่ระบุ">
+      </div>
+      <div class="wf-field">
+        <label for="m-due">กำหนดเสร็จ</label>
+        <input type="date" id="m-due">
+      </div>
+    </div>
 
     <div class="phase-step" data-p="work">
       <label class="phase-step-head">
@@ -1089,6 +1205,28 @@
   let activeId = null;
   let lastAddedId = null;
   let pickerKind = 'must';
+  let searchQuery = '';
+  let filterUnfinished = false;
+
+  function itemMatchesFilters(item){
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const hay = (item.title + ' ' + (item.note || '') + ' ' + (item.owner || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    if (filterUnfinished) {
+      const allDone = ['work','right','fast'].every(function(p){ return item.phases[p].done; });
+      if (allDone) return false;
+    }
+    return true;
+  }
+
+  function formatDueDate(dateStr){
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch(e){ return dateStr; }
+  }
 
   function boardKey(id){ return 'pb-board-' + id; }
 
@@ -1184,14 +1322,15 @@
     lastAddedId = null;
     let justAddedEl = null;
     KINDS.forEach(function(k){
-      const list = items.filter(function(i){ return i.kind === k; });
+      const kindItems = items.filter(function(i){ return i.kind === k; });
+      const list = kindItems.filter(itemMatchesFilters);
       const wrap = document.getElementById('cards-' + k);
       document.getElementById('count-' + k).textContent = list.length;
       wrap.innerHTML = '';
       if (!list.length){
         const hint = document.createElement('div');
         hint.className = 'empty-hint';
-        hint.textContent = EMPTY_HINT[k];
+        hint.textContent = kindItems.length ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : EMPTY_HINT[k];
         wrap.appendChild(hint);
         return;
       }
@@ -1214,6 +1353,16 @@
         title.className = 'title';
         title.textContent = item.title;
         card.appendChild(title);
+
+        if (item.owner || item.due) {
+          const meta = document.createElement('p');
+          meta.className = 'card-meta';
+          const parts = [];
+          if (item.owner) parts.push(item.owner);
+          if (item.due) parts.push('กำหนด ' + formatDueDate(item.due));
+          meta.textContent = parts.join(' · ');
+          card.appendChild(meta);
+        }
 
         const phasebar = document.createElement('div');
         phasebar.className = 'phasebar';
@@ -1299,6 +1448,16 @@
     });
   }
 
+  document.getElementById('search-input').addEventListener('input', function(e){
+    searchQuery = e.target.value.trim();
+    render();
+  });
+
+  document.getElementById('filter-unfinished').addEventListener('change', function(e){
+    filterUnfinished = e.target.checked;
+    render();
+  });
+
   document.getElementById('picker').addEventListener('click', function(e){
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -1330,22 +1489,18 @@
   });
 
   const veil = document.getElementById('veil');
-  const tagLabel = {
-    must: { en: 'MUST', th: 'ต้องมี' },
-    should: { en: 'SHOULD', th: 'ควรมี' },
-    could: { en: 'COULD', th: 'มีก็ดี' },
-    wont: { en: "WON'T", th: 'ยังไม่ทำ' }
-  };
 
   function openModal(id){
     activeId = id;
     const item = items.find(function(i){ return i.id === id; });
     if (!item) return;
-    const tag = tagLabel[item.kind];
-    document.getElementById('m-tag').innerHTML = '<span class="en">' + tag.en + '</span> · ' + tag.th;
-    document.getElementById('m-tag').dataset.k = item.kind;
-    document.getElementById('m-title').textContent = item.title;
-    document.getElementById('m-note').textContent = item.note || '';
+    document.getElementById('m-title').value = item.title;
+    document.getElementById('m-note').value = item.note || '';
+    document.getElementById('m-owner').value = item.owner || '';
+    document.getElementById('m-due').value = item.due || '';
+    Array.from(document.querySelectorAll('#m-kind-picker button')).forEach(function(b){
+      b.classList.toggle('active', b.dataset.k === item.kind);
+    });
     ['work','right','fast'].forEach(function(p){
       const step = document.querySelector('.phase-step[data-p="' + p + '"]');
       const cb = step.querySelector('input[type="checkbox"]');
@@ -1360,7 +1515,49 @@
   function closeModal(){
     veil.classList.remove('open');
     activeId = null;
+    render();
   }
+
+  document.getElementById('m-title').addEventListener('input', function(e){
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    item.title = e.target.value;
+    save();
+  });
+
+  document.getElementById('m-note').addEventListener('input', function(e){
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    item.note = e.target.value;
+    save();
+  });
+
+  document.getElementById('m-owner').addEventListener('input', function(e){
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    item.owner = e.target.value;
+    save();
+  });
+
+  document.getElementById('m-due').addEventListener('change', function(e){
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    item.due = e.target.value;
+    save();
+  });
+
+  document.getElementById('m-kind-picker').addEventListener('click', function(e){
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    item.kind = btn.dataset.k;
+    Array.from(document.querySelectorAll('#m-kind-picker button')).forEach(function(b){
+      b.classList.toggle('active', b === btn);
+    });
+    save();
+    render();
+  });
 
   document.getElementById('m-close').addEventListener('click', closeModal);
   veil.addEventListener('click', function(e){ if (e.target === veil) closeModal(); });
@@ -1398,12 +1595,16 @@
 
   document.getElementById('m-delete').addEventListener('click', function(){
     if (!activeId) return;
+    const item = items.find(function(i){ return i.id === activeId; });
+    const label = item ? item.title : 'รายการนี้';
+    if (!window.confirm('ลบ "' + label + '" ออกจากบอร์ด? การกระทำนี้ย้อนกลับไม่ได้')) return;
     const modalEl = document.querySelector('.modal');
     modalEl.classList.add('modal-deleting');
     setTimeout(function(){
       items = items.filter(function(i){ return i.id !== activeId; });
       save();
-      closeModal();
+      activeId = null;
+      veil.classList.remove('open');
       modalEl.classList.remove('modal-deleting');
       render();
     }, 220);
@@ -1439,6 +1640,8 @@
       list.forEach(function(item){
         lines.push('- **' + item.title + '**');
         if (item.note) lines.push('  - เหตุผล: ' + item.note);
+        if (item.owner) lines.push('  - ผู้รับผิดชอบ: ' + item.owner);
+        if (item.due) lines.push('  - กำหนดเสร็จ: ' + item.due);
         ['work','right','fast'].forEach(function(p){
           const ph = item.phases[p];
           const box = ph.done ? '[x]' : '[ ]';
@@ -1486,6 +1689,8 @@
         body += '<div class="item">';
         body += '<p class="title">' + escapeHtml(item.title) + '</p>';
         if (item.note) body += '<p class="note">เหตุผล: ' + escapeHtml(item.note) + '</p>';
+        if (item.owner) body += '<p class="note">ผู้รับผิดชอบ: ' + escapeHtml(item.owner) + '</p>';
+        if (item.due) body += '<p class="note">กำหนดเสร็จ: ' + escapeHtml(item.due) + '</p>';
         body += '<ul class="phases">';
         ['work','right','fast'].forEach(function(p){
           const ph = item.phases[p];
@@ -1546,30 +1751,77 @@
     } catch(e){ return ''; }
   }
 
-  function renderBoardsList(){
-    const grid = document.getElementById('boards-grid');
-    grid.innerHTML = '';
-    if (!boardsIndex.length){
-      const hint = document.createElement('div');
-      hint.className = 'empty-hint';
-      hint.textContent = 'ยังไม่มีบอร์ด สร้างบอร์ดแรกด้านบนได้เลย';
-      grid.appendChild(hint);
-      return;
-    }
-    const sorted = boardsIndex.slice().sort(function(a, b){ return b.updatedAt - a.updatedAt; });
-    sorted.forEach(function(b){
-      const boardItems = loadBoardItems(b.id);
-      const counts = { must: 0, should: 0, could: 0, wont: 0 };
-      boardItems.forEach(function(it){ if (counts[it.kind] != null) counts[it.kind]++; });
+  function setBoardArchived(id, archived){
+    const b = boardsIndex.find(function(x){ return x.id === id; });
+    if (!b) return;
+    b.archived = archived;
+    b.updatedAt = Date.now();
+    saveIndex();
+  }
 
-      const card = document.createElement('div');
-      card.className = 'board-card';
+  function buildBoardCard(b, isArchived){
+    const boardItems = loadBoardItems(b.id);
+    const counts = { must: 0, should: 0, could: 0, wont: 0 };
+    let totalPhases = 0, donePhases = 0;
+    boardItems.forEach(function(it){
+      if (counts[it.kind] != null) counts[it.kind]++;
+      ['work','right','fast'].forEach(function(p){
+        totalPhases++;
+        if (it.phases && it.phases[p] && it.phases[p].done) donePhases++;
+      });
+    });
+    const pct = totalPhases ? Math.round(donePhases / totalPhases * 100) : 0;
+
+    const card = document.createElement('div');
+    card.className = 'board-card';
+
+    const actions = document.createElement('div');
+    actions.className = 'board-card-actions';
+
+    if (isArchived) {
+      const restore = document.createElement('button');
+      restore.className = 'card-action-btn';
+      restore.type = 'button';
+      restore.title = 'กู้คืนบอร์ดนี้';
+      restore.textContent = 'กู้คืน';
+      restore.addEventListener('click', function(e){
+        e.stopPropagation();
+        setBoardArchived(b.id, false);
+        renderBoardsList();
+      });
+      actions.appendChild(restore);
 
       const del = document.createElement('button');
-      del.className = 'board-del';
+      del.className = 'card-action-btn danger';
+      del.type = 'button';
+      del.title = 'ลบบอร์ดนี้ถาวร';
+      del.textContent = 'ลบถาวร';
+      del.addEventListener('click', function(e){
+        e.stopPropagation();
+        if (window.confirm('ลบบอร์ด "' + b.name + '" และ requirement ทั้งหมดในนั้นถาวร? การกระทำนี้ย้อนกลับไม่ได้')) {
+          deleteBoard(b.id);
+          renderBoardsList();
+        }
+      });
+      actions.appendChild(del);
+    } else {
+      const archive = document.createElement('button');
+      archive.className = 'card-action-btn';
+      archive.type = 'button';
+      archive.title = 'เก็บเข้าคลัง';
+      archive.textContent = 'เก็บ';
+      archive.addEventListener('click', function(e){
+        e.stopPropagation();
+        setBoardArchived(b.id, true);
+        renderBoardsList();
+      });
+      actions.appendChild(archive);
+
+      const del = document.createElement('button');
+      del.className = 'card-action-btn danger';
       del.type = 'button';
       del.title = 'ลบบอร์ดนี้';
-      del.textContent = '✕';
+      del.textContent = 'ลบ';
       del.addEventListener('click', function(e){
         e.stopPropagation();
         if (window.confirm('ลบบอร์ด "' + b.name + '" และ requirement ทั้งหมดในนั้น? การกระทำนี้ย้อนกลับไม่ได้')) {
@@ -1577,34 +1829,74 @@
           renderBoardsList();
         }
       });
-      card.appendChild(del);
+      actions.appendChild(del);
+    }
+    card.appendChild(actions);
 
-      const name = document.createElement('p');
-      name.className = 'board-card-name';
-      name.textContent = b.name;
-      card.appendChild(name);
+    const name = document.createElement('p');
+    name.className = 'board-card-name';
+    name.textContent = b.name;
+    card.appendChild(name);
 
-      const meta = document.createElement('p');
-      meta.className = 'board-meta';
-      meta.textContent = 'แก้ไขล่าสุด ' + formatDate(b.updatedAt) + ' · ' + boardItems.length + ' รายการ';
-      card.appendChild(meta);
+    const meta = document.createElement('p');
+    meta.className = 'board-meta';
+    meta.textContent = 'แก้ไขล่าสุด ' + formatDate(b.updatedAt) + ' · ' + boardItems.length + ' รายการ';
+    card.appendChild(meta);
 
-      const chips = document.createElement('div');
-      chips.className = 'board-chips';
-      KINDS.forEach(function(k){
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.dataset.k = k;
-        chip.textContent = k.charAt(0).toUpperCase() + ' ' + counts[k];
-        chips.appendChild(chip);
-      });
-      card.appendChild(chips);
-
-      card.addEventListener('click', function(){
-        location.hash = '#/board/' + b.id;
-      });
-      grid.appendChild(card);
+    const chips = document.createElement('div');
+    chips.className = 'board-chips';
+    KINDS.forEach(function(k){
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.dataset.k = k;
+      chip.textContent = k.charAt(0).toUpperCase() + ' ' + counts[k];
+      chips.appendChild(chip);
     });
+    card.appendChild(chips);
+
+    const progress = document.createElement('div');
+    progress.className = 'board-progress';
+    const bar = document.createElement('div');
+    bar.className = 'progress-bar';
+    bar.innerHTML = '<span style="width:' + pct + '%"></span>';
+    const label = document.createElement('p');
+    label.className = 'board-progress-label';
+    label.textContent = pct + '% เสร็จ (' + donePhases + '/' + totalPhases + ' ขั้น)';
+    progress.appendChild(bar);
+    progress.appendChild(label);
+    card.appendChild(progress);
+
+    card.addEventListener('click', function(){
+      location.hash = '#/board/' + b.id;
+    });
+    return card;
+  }
+
+  function renderBoardsList(){
+    const grid = document.getElementById('boards-grid');
+    const archiveSection = document.getElementById('archive-section');
+    const archivedGrid = document.getElementById('archived-grid');
+    const archiveCount = document.getElementById('archive-count');
+    grid.innerHTML = '';
+
+    const active = boardsIndex.filter(function(b){ return !b.archived; });
+    const archived = boardsIndex.filter(function(b){ return b.archived; });
+
+    if (!active.length){
+      const hint = document.createElement('div');
+      hint.className = 'empty-hint';
+      hint.textContent = boardsIndex.length ? 'ไม่มีบอร์ดที่ใช้งานอยู่ (ดูบอร์ดที่เก็บถาวรด้านล่าง)' : 'ยังไม่มีบอร์ด สร้างบอร์ดแรกด้านบนได้เลย';
+      grid.appendChild(hint);
+    } else {
+      active.slice().sort(function(a, b){ return b.updatedAt - a.updatedAt; })
+        .forEach(function(b){ grid.appendChild(buildBoardCard(b, false)); });
+    }
+
+    archiveCount.textContent = archived.length;
+    archiveSection.hidden = archived.length === 0;
+    archivedGrid.innerHTML = '';
+    archived.slice().sort(function(a, b){ return b.updatedAt - a.updatedAt; })
+      .forEach(function(b){ archivedGrid.appendChild(buildBoardCard(b, true)); });
   }
 
   function route(){
@@ -1613,6 +1905,10 @@
       currentBoardId = m[1];
       items = loadBoardItems(currentBoardId);
       document.getElementById('board-title').textContent = currentBoard().name;
+      searchQuery = '';
+      filterUnfinished = false;
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-unfinished').checked = false;
       render();
       showView('board');
     } else {
@@ -1620,6 +1916,13 @@
       showView('list');
     }
   }
+
+  document.getElementById('archive-toggle').addEventListener('click', function(){
+    const grid = document.getElementById('archived-grid');
+    const chevron = document.getElementById('archive-chevron');
+    grid.hidden = !grid.hidden;
+    chevron.textContent = grid.hidden ? '▸' : '▾';
+  });
 
   document.getElementById('create-board-btn').addEventListener('click', function(){
     const nameEl = document.getElementById('new-board-name');
