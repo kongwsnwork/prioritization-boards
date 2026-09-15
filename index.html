@@ -581,8 +581,10 @@
   .modal-cols {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
     gap: 26px;
   }
+  .modal-col .m-meta-row .wf-field { min-width: 0; }
   .modal-col-right {
     border-left: 2px solid var(--border);
     padding-left: 26px;
