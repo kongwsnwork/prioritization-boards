@@ -492,6 +492,17 @@
     border-color: var(--quaternary);
     color: #fff;
   }
+  .card-done-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    background: var(--quaternary-bg);
+    color: var(--quaternary);
+    font-weight: 700;
+    font-size: 11.5px;
+    border: 1.5px solid var(--quaternary);
+  }
 
   .empty-hint {
     font-size: 13px;
@@ -610,6 +621,24 @@
   .m-section { margin-bottom: 16px; }
   .m-meta-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
   .m-meta-row .wf-field { flex: 1; min-width: 150px; }
+
+  .m-done-toggle {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    border: 2px solid var(--border); border-radius: var(--radius-md);
+    padding: 12px 15px; margin-bottom: 18px; background: var(--card);
+    transition: border-color 150ms, background 150ms;
+  }
+  .m-done-toggle input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .m-done-toggle .check {
+    width: 26px; height: 26px; border: 2px solid var(--fg); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-weight: 800; font-size: 14px; color: transparent; background: var(--bg);
+    transition: background 150ms, border-color 150ms, color 150ms;
+  }
+  .m-done-toggle .text { font-weight: 700; font-size: 14.5px; }
+  .m-done-toggle .text small { display: block; font-weight: 500; color: var(--muted-fg); font-size: 12px; margin-top: 2px; }
+  .m-done-toggle.done { border-color: var(--quaternary); background: var(--quaternary-bg); }
+  .m-done-toggle.done .check { background: var(--quaternary); border-color: var(--quaternary); color: #fff; }
 
   .phase-step {
     border: 2px solid var(--border);
@@ -1109,7 +1138,7 @@
         <p class="flow-desc">ปรับให้เร็ว/มีประสิทธิภาพขึ้น เฉพาะจุดที่จำเป็นจริง</p>
       </div>
     </div>
-    <p class="guide-note">นี่คือความหมายของจุด W / R / F บนการ์ดแต่ละใบด้านบน โดย item ระดับ Must ก็ยังต้องไล่ทำ 3 ขั้นนี้เหมือนกับทุกระดับ</p>
+    <p class="guide-note">นี่คือความหมายของจุด W / R / F บนการ์ดแต่ละใบด้านบน บางงานไม่จำเป็นต้องไล่ครบทั้ง 3 ขั้น ใช้ติ๊ก "เสร็จแล้ว" ที่ตัวการ์ดแทนได้เลยเมื่องานจบจริง ๆ</p>
   </div>
 </section>
 </div>
@@ -1131,6 +1160,12 @@
         <button type="button" data-k="wont">Won't<span class="th">ยังไม่ทำ</span></button>
       </div>
     </div>
+
+    <label class="m-done-toggle" id="m-done-toggle">
+      <input type="checkbox" id="m-done">
+      <span class="check" aria-hidden="true">✓</span>
+      <span class="text">เสร็จแล้ว<small>ทำเครื่องหมายเมื่องานนี้จบจริง ไม่จำเป็นต้องผ่านครบ 3 ขั้นด้านล่างก่อน</small></span>
+    </label>
 
     <div class="m-meta-row">
       <div class="wf-field">
@@ -1228,8 +1263,7 @@
       if (hay.indexOf(q) === -1) return false;
     }
     if (filterUnfinished) {
-      const allDone = ['work','right','fast'].every(function(p){ return item.phases[p].done; });
-      if (allDone) return false;
+      if (item.done) return false;
     }
     return true;
   }
@@ -1250,7 +1284,13 @@
   function loadBoardItems(id){
     try {
       const raw = localStorage.getItem(boardKey(id));
-      return raw ? JSON.parse(raw) : [];
+      const list = raw ? JSON.parse(raw) : [];
+      list.forEach(function(it){
+        if (it.done === undefined) {
+          it.done = !!(it.phases && it.phases.work.done && it.phases.right.done && it.phases.fast.done);
+        }
+      });
+      return list;
     } catch(e){ return []; }
   }
 
@@ -1388,6 +1428,13 @@
         });
         card.appendChild(phasebar);
 
+        if (item.done) {
+          const badge = document.createElement('span');
+          badge.className = 'card-done-badge';
+          badge.textContent = '✓ เสร็จแล้ว';
+          card.appendChild(badge);
+        }
+
         card.addEventListener('click', function(){
           if (card.classList.contains('dragging')) return;
           openModal(item.id);
@@ -1490,6 +1537,7 @@
       kind: pickerKind,
       title: title,
       note: noteEl.value.trim(),
+      done: false,
       phases: { work:{done:false,note:''}, right:{done:false,note:''}, fast:{done:false,note:''} }
     };
     items.unshift(newItem);
@@ -1511,6 +1559,8 @@
     document.getElementById('m-note').value = item.note || '';
     document.getElementById('m-owner').value = item.owner || '';
     document.getElementById('m-due').value = item.due || '';
+    document.getElementById('m-done').checked = !!item.done;
+    document.getElementById('m-done-toggle').classList.toggle('done', !!item.done);
     Array.from(document.querySelectorAll('#m-kind-picker button')).forEach(function(b){
       b.classList.toggle('active', b.dataset.k === item.kind);
     });
@@ -1562,6 +1612,23 @@
     save();
   });
 
+  document.getElementById('m-done').addEventListener('change', function(e){
+    const item = items.find(function(i){ return i.id === activeId; });
+    if (!item) return;
+    const wasDone = item.done;
+    item.done = e.target.checked;
+    document.getElementById('m-done-toggle').classList.toggle('done', item.done);
+    if (!wasDone && item.done) {
+      const rect = document.getElementById('m-done-toggle').querySelector('.check').getBoundingClientRect();
+      spawnConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      const modalEl = document.querySelector('.modal');
+      modalEl.classList.add('modal-celebrate');
+      setTimeout(function(){ modalEl.classList.remove('modal-celebrate'); }, 700);
+    }
+    save();
+    render();
+  });
+
   document.getElementById('m-kind-picker').addEventListener('click', function(e){
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -1584,11 +1651,13 @@
       const item = items.find(function(i){ return i.id === activeId; });
       if (!item) return;
       const p = cb.dataset.p;
-      const wasComplete = ['work','right','fast'].every(function(ph){ return item.phases[ph].done; });
       item.phases[p].done = cb.checked;
       cb.closest('.phase-step').classList.toggle('done', cb.checked);
-      const isComplete = ['work','right','fast'].every(function(ph){ return item.phases[ph].done; });
-      if (!wasComplete && isComplete) {
+      const allPhasesDone = ['work','right','fast'].every(function(ph){ return item.phases[ph].done; });
+      if (allPhasesDone && !item.done) {
+        item.done = true;
+        document.getElementById('m-done').checked = true;
+        document.getElementById('m-done-toggle').classList.add('done');
         const rect = cb.closest('.phase-step').querySelector('.num').getBoundingClientRect();
         spawnConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
         const modalEl = document.querySelector('.modal');
@@ -1778,15 +1847,16 @@
   function buildBoardCard(b, isArchived){
     const boardItems = loadBoardItems(b.id);
     const counts = { must: 0, should: 0, could: 0, wont: 0 };
-    let totalPhases = 0, donePhases = 0;
+    let totalPhases = 0, donePhases = 0, doneItems = 0;
     boardItems.forEach(function(it){
       if (counts[it.kind] != null) counts[it.kind]++;
+      if (it.done) doneItems++;
       ['work','right','fast'].forEach(function(p){
         totalPhases++;
         if (it.phases && it.phases[p] && it.phases[p].done) donePhases++;
       });
     });
-    const pct = totalPhases ? Math.round(donePhases / totalPhases * 100) : 0;
+    const pct = boardItems.length ? Math.round(doneItems / boardItems.length * 100) : 0;
 
     const card = document.createElement('div');
     card.className = 'board-card';
@@ -1877,7 +1947,7 @@
     bar.innerHTML = '<span style="width:' + pct + '%"></span>';
     const label = document.createElement('p');
     label.className = 'board-progress-label';
-    label.textContent = pct + '% เสร็จ (' + donePhases + '/' + totalPhases + ' ขั้น)';
+    label.textContent = pct + '% เสร็จ (' + doneItems + '/' + boardItems.length + ' รายการ · ' + donePhases + '/' + totalPhases + ' ขั้น)';
     progress.appendChild(bar);
     progress.appendChild(label);
     card.appendChild(progress);
