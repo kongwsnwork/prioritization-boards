@@ -554,8 +554,8 @@
     max-height: 88vh;
     overflow-y: auto;
     padding: 28px 26px;
-    animation: pop-in 260ms var(--bounce);
   }
+  .modal.modal-opening { animation: pop-in 260ms var(--bounce); }
   .modal-head {
     display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
     margin-bottom: 4px;
@@ -1521,6 +1521,9 @@
       step.classList.toggle('done', item.phases[p].done);
     });
     veil.classList.add('open');
+    const modalEl = document.querySelector('.modal');
+    modalEl.classList.add('modal-opening');
+    setTimeout(function(){ modalEl.classList.remove('modal-opening'); }, 260);
   }
 
   function closeModal(){
