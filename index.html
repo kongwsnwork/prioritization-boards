@@ -563,13 +563,20 @@
     max-width: 560px;
     width: 100%;
     max-height: 88vh;
-    overflow-y: auto;
-    padding: 28px 26px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .modal.modal-opening { animation: pop-in 260ms var(--bounce); }
   .modal-head {
     display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
-    margin-bottom: 4px;
+    padding: 24px 26px 14px;
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+  .modal-body {
+    overflow-y: auto;
+    padding: 18px 26px 26px;
   }
   .modal-tag {
     display: inline-block;
@@ -616,7 +623,7 @@
   }
   .m-note-input {
     width: 100%;
-    font-size: 14px; color: var(--muted-fg); margin: -8px 0 18px; line-height: 1.6; font-weight: 500;
+    font-size: 14px; color: var(--muted-fg); margin: 0 0 18px; line-height: 1.6; font-weight: 500;
   }
   .m-section { margin-bottom: 16px; }
   .m-meta-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -663,6 +670,13 @@
   .phase-step-head .label small { display: block; font-weight: 500; color: var(--muted-fg); font-size: 12px; margin-top: 2px; }
   .phase-step.done { border-color: var(--quaternary); background: var(--quaternary-bg); }
   .phase-step.done .num { background: var(--quaternary); border-color: var(--quaternary); color: #fff; }
+  .phase-note-toggle {
+    display: block;
+    background: none; border: none; color: var(--accent); cursor: pointer;
+    font-family: var(--font-body); font-weight: 700; font-size: 12.5px;
+    padding: 8px 0 0; margin: 0 0 0 34px;
+  }
+  .phase-note-toggle:hover { text-decoration: underline; }
   .phase-step textarea { margin-top: 10px; font-size: 13.5px; }
 
   .modal-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
@@ -1149,64 +1163,72 @@
       <input type="text" id="m-title" class="m-title-input" placeholder="ชื่อ requirement">
       <button class="close-x" id="m-close">&times;</button>
     </div>
-    <input type="text" id="m-note" class="m-note-input" placeholder="รายละเอียด / เหตุผล (ไม่บังคับ)">
+    <div class="modal-body">
+      <input type="text" id="m-note" class="m-note-input" placeholder="รายละเอียด / เหตุผล (ไม่บังคับ)">
 
-    <div class="m-section">
-      <label>ระดับ MoSCoW</label>
-      <div class="moscow-picker" id="m-kind-picker">
-        <button type="button" data-k="must">Must<span class="th">ต้องมี</span></button>
-        <button type="button" data-k="should">Should<span class="th">ควรมี</span></button>
-        <button type="button" data-k="could">Could<span class="th">มีก็ดี</span></button>
-        <button type="button" data-k="wont">Won't<span class="th">ยังไม่ทำ</span></button>
+      <div class="m-section">
+        <label>ระดับ MoSCoW</label>
+        <div class="moscow-picker" id="m-kind-picker">
+          <button type="button" data-k="must">Must<span class="th">ต้องมี</span></button>
+          <button type="button" data-k="should">Should<span class="th">ควรมี</span></button>
+          <button type="button" data-k="could">Could<span class="th">มีก็ดี</span></button>
+          <button type="button" data-k="wont">Won't<span class="th">ยังไม่ทำ</span></button>
+        </div>
+
+        <div class="m-meta-row">
+          <div class="wf-field">
+            <label for="m-owner">ผู้รับผิดชอบ</label>
+            <input type="text" id="m-owner" placeholder="ไม่ระบุ">
+          </div>
+          <div class="wf-field">
+            <label for="m-due">กำหนดเสร็จ</label>
+            <input type="date" id="m-due">
+          </div>
+        </div>
       </div>
-    </div>
 
-    <label class="m-done-toggle" id="m-done-toggle">
-      <input type="checkbox" id="m-done">
-      <span class="check" aria-hidden="true">✓</span>
-      <span class="text">เสร็จแล้ว<small>ทำเครื่องหมายเมื่องานนี้จบจริง ไม่จำเป็นต้องผ่านครบ 3 ขั้นด้านล่างก่อน</small></span>
-    </label>
+      <div class="m-section">
+        <label>ความคืบหน้า</label>
+        <label class="m-done-toggle" id="m-done-toggle">
+          <input type="checkbox" id="m-done">
+          <span class="check" aria-hidden="true">✓</span>
+          <span class="text">เสร็จแล้ว<small>ทำเครื่องหมายเมื่องานนี้จบจริง ไม่จำเป็นต้องผ่านครบ 3 ขั้นด้านล่างก่อน</small></span>
+        </label>
 
-    <div class="m-meta-row">
-      <div class="wf-field">
-        <label for="m-owner">ผู้รับผิดชอบ</label>
-        <input type="text" id="m-owner" placeholder="ไม่ระบุ">
+        <div class="phase-step" data-p="work">
+          <label class="phase-step-head">
+            <input type="checkbox" data-p="work">
+            <span class="num">1</span>
+            <span class="label">Make It Work<small>ทำเวอร์ชันง่ายที่สุดที่ใช้งานได้จริงก่อน ยังไม่ต้องสมบูรณ์แบบ</small></span>
+          </label>
+          <button type="button" class="phase-note-toggle" data-p="work">+ เพิ่มโน้ต</button>
+          <textarea data-p="work" placeholder="โน้ต เช่น วิธีที่ทำให้เสร็จแบบง่ายที่สุด..." hidden></textarea>
+        </div>
+
+        <div class="phase-step" data-p="right">
+          <label class="phase-step-head">
+            <input type="checkbox" data-p="right">
+            <span class="num">2</span>
+            <span class="label">Make It Right<small>ปรับให้ถูกต้อง รัดกุม ดูแลรักษาได้ในระยะยาว</small></span>
+          </label>
+          <button type="button" class="phase-note-toggle" data-p="right">+ เพิ่มโน้ต</button>
+          <textarea data-p="right" placeholder="โน้ต เช่น จุดที่ต้องปรับปรุงให้รัดกุมขึ้น..." hidden></textarea>
+        </div>
+
+        <div class="phase-step" data-p="fast">
+          <label class="phase-step-head">
+            <input type="checkbox" data-p="fast">
+            <span class="num">3</span>
+            <span class="label">Make It Fast<small>ปรับให้เร็ว/มีประสิทธิภาพขึ้น เฉพาะจุดที่จำเป็นจริง</small></span>
+          </label>
+          <button type="button" class="phase-note-toggle" data-p="fast">+ เพิ่มโน้ต</button>
+          <textarea data-p="fast" placeholder="โน้ต เช่น จุดที่ควรทำให้เร็ว/มีประสิทธิภาพขึ้น..." hidden></textarea>
+        </div>
       </div>
-      <div class="wf-field">
-        <label for="m-due">กำหนดเสร็จ</label>
-        <input type="date" id="m-due">
+
+      <div class="modal-foot">
+        <button id="m-delete">ลบ requirement นี้</button>
       </div>
-    </div>
-
-    <div class="phase-step" data-p="work">
-      <label class="phase-step-head">
-        <input type="checkbox" data-p="work">
-        <span class="num">1</span>
-        <span class="label">Make It Work<small>ทำเวอร์ชันง่ายที่สุดที่ใช้งานได้จริงก่อน ยังไม่ต้องสมบูรณ์แบบ</small></span>
-      </label>
-      <textarea data-p="work" placeholder="โน้ต เช่น วิธีที่ทำให้เสร็จแบบง่ายที่สุด..."></textarea>
-    </div>
-
-    <div class="phase-step" data-p="right">
-      <label class="phase-step-head">
-        <input type="checkbox" data-p="right">
-        <span class="num">2</span>
-        <span class="label">Make It Right<small>ปรับให้ถูกต้อง รัดกุม ดูแลรักษาได้ในระยะยาว</small></span>
-      </label>
-      <textarea data-p="right" placeholder="โน้ต เช่น จุดที่ต้องปรับปรุงให้รัดกุมขึ้น..."></textarea>
-    </div>
-
-    <div class="phase-step" data-p="fast">
-      <label class="phase-step-head">
-        <input type="checkbox" data-p="fast">
-        <span class="num">3</span>
-        <span class="label">Make It Fast<small>ปรับให้เร็ว/มีประสิทธิภาพขึ้น เฉพาะจุดที่จำเป็นจริง</small></span>
-      </label>
-      <textarea data-p="fast" placeholder="โน้ต เช่น จุดที่ควรทำให้เร็ว/มีประสิทธิภาพขึ้น..."></textarea>
-    </div>
-
-    <div class="modal-foot">
-      <button id="m-delete">ลบ requirement นี้</button>
     </div>
   </div>
 </div>
@@ -1568,9 +1590,13 @@
       const step = document.querySelector('.phase-step[data-p="' + p + '"]');
       const cb = step.querySelector('input[type="checkbox"]');
       const ta = step.querySelector('textarea');
+      const noteToggle = step.querySelector('.phase-note-toggle');
       cb.checked = item.phases[p].done;
       ta.value = item.phases[p].note;
       step.classList.toggle('done', item.phases[p].done);
+      const hasNote = !!item.phases[p].note;
+      ta.hidden = !hasNote;
+      noteToggle.textContent = hasNote ? 'ซ่อนโน้ต' : '+ เพิ่มโน้ต';
     });
     veil.classList.add('open');
     const modalEl = document.querySelector('.modal');
@@ -1666,6 +1692,17 @@
       }
       save();
       render();
+    });
+  });
+
+  document.querySelectorAll('.phase-note-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const p = btn.dataset.p;
+      const ta = document.querySelector('.phase-step[data-p="' + p + '"] textarea');
+      const show = ta.hidden;
+      ta.hidden = !show;
+      btn.textContent = show ? 'ซ่อนโน้ต' : '+ เพิ่มโน้ต';
+      if (show) ta.focus();
     });
   });
 
