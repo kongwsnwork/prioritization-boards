@@ -1191,6 +1191,7 @@
   };
 
   function spawnConfetti(x, y){
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const colors = ['var(--accent)', 'var(--secondary)', 'var(--tertiary)', 'var(--quaternary)'];
     for (let i = 0; i < 16; i++){
       const piece = document.createElement('span');
@@ -1208,6 +1209,7 @@
       piece.style.animationDelay = (Math.random() * 80).toFixed(0) + 'ms';
       document.body.appendChild(piece);
       piece.addEventListener('animationend', function(){ piece.remove(); });
+      setTimeout(function(){ piece.remove(); }, 1000);
     }
   }
   let boardsIndex = [];
